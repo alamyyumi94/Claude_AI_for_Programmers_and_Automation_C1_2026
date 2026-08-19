@@ -41,7 +41,7 @@ class ClaudeService:
     ) -> ClaudeTextResult:
         request = {
             "model": self.settings.claude_model,
-            max_tokens: max_tokens,
+            "max_tokens": max_tokens,
             "messages": [
                 {
                     "role": "user",
@@ -55,7 +55,7 @@ class ClaudeService:
 
         message = await self.client.messages.create(**request)
 
-        text_parts = [block.text for block in message.context if block.type == "text"]
+        text_parts = [block.text for block in message.content if block.type == "text"]
 
         text = "\n".join(text_parts).strip()
 
