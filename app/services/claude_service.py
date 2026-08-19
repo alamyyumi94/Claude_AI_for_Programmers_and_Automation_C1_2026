@@ -1,5 +1,8 @@
 from dataclasses import dataclass
-from anthoropic import AsyncAnthropic
+from functools import lru_cache
+
+from anthropic import AsyncAnthropic
+
 from app.config import get_settings
 
 
@@ -22,9 +25,9 @@ class ClaudeService:
             raise ClaudeConfigurationError("Claude API key is not configured.")
         if self.settings.claude_model is None:
             raise ClaudeConfigurationError("Claude model is not configured.")
+        self.model = self.settings.claude_model
         self.client = AsyncAnthropic(
             api_key=self.settings.anthropic_api_key.get_secret_value().strip(),
-            model=self.settings.claude_model.strip(),
             timeout=self.settings.claude_timeout_seconds,
             max_retries=self.settings.claude_max_retries,
         )
