@@ -1,0 +1,15 @@
+1. Explain the differences betwenn using claude as a human vs through APIs
+2. Python + FastAPI
+Configure API key
+Claude API call from Python
+Differences between application instructions vs user provided data
+
+
+By end of day
+
+Postman -> FastAPI -> anthropic messages API -> JSON RESPONSE
+
+Day 1: API -> Prompt -> Structured Output -? Backend
+Day 2: Database
+Day 3: Security, performance
+
