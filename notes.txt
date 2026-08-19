@@ -13,3 +13,76 @@ Day 1: API -> Prompt -> Structured Output -? Backend
 Day 2: Database
 Day 3: Security, performance
 
+
+BIG PICTURE
+OurAPP -> HTTP/API Request -> Claude API -> response -> OurAPP
+
+REQUEST
+client.messages.create(
+    model:...
+    system=".."
+    messages=[
+        {
+            "role": "user,
+            "content": "Summarise this... "
+        }
+    ]
+)
+
+MODEL
+model="some-claude-model"
+
+SYSTEM/APPLICATION Instructions
+tells Calude how your app want it to behave
+"
+You are a customer support assistant
+Summarise customer complaints objectively
+Do not invent missing info
+Return no more than 3 sentences
+"
+
+user content: "MY package was supposed to arrrive yesterday..."
+
+SYSTEM: (app config/ behaviour rules)
+"What job are we doing and what rules apply?"
+USER MESSAGE: (runtime input)
+"What am I asking Claude to process right now"
+
+MESSAGES
+input provieded to Claude
+messages=[
+    {
+        "role": "user,
+        "content": "Summarise this... "
+    }
+]
+
+max_tokens=200 (upper bound, not target length)
+DOES NOT CONTROL size of the incoming request
+
+INPUT SIZE                  OUTPUT LIMIT    
+messages + system ------>   claude ------> <= max_tokens
+
+
+response.content
+App -> Claude
+Claude -> App
+
+Characters -> Tokenizer -> Tokens -> Model
+
+1. Capacity
+2. Latency
+3. Cost(amount processed + amount generated)
+
+{
+    "text": "100MB worth of text"
+}
+
+Client -> FastAPI/Pydantic (Will our app accept this much?) -> App (Do we need all this info) -> Claude (Does it fit the model/context contraint) -> max_output ()
+
+class SummariseRequest(BaseModel):
+    text: str = Field(length=5000)
+
+
+What should or app do first?
+Find relevant cust -> relevent order/ticker -> send only relevat context -> claude
