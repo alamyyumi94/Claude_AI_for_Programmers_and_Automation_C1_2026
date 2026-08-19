@@ -8,7 +8,6 @@ router = APIRouter(tags=["summarise"])
 
 @router.post("/summarise", response_model=ClaudeTextResult)
 async def summarise(input: str) -> ClaudeTextResult:
-
     claude_service = ClaudeService()
     result = await claude_service.generate_text(
         user_message=input,

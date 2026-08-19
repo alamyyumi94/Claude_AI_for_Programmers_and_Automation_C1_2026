@@ -1,12 +1,19 @@
 from dataclasses import dataclass
 from functools import lru_cache
 
+from typing import Generic, TypeVar
+
 from anthropic import AsyncAnthropic
 
 from app.config import get_settings
 
+from pydantic import BaseModel, ValidationError
+
 
 class ClaudeConfigurationError(RuntimeError):
+    pass
+
+class ClaudeResponseError(RuntimeError):
     pass
 
 
