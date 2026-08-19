@@ -23,16 +23,16 @@ Use Postman and the project source to determine how the request moves through th
 Record:
 
 ```text
-HTTP method:
-Path:
-HTTP status:
-Response body:
+HTTP method:GET
+Path:/health
+HTTP status:200
+Response body:{"status":"ok"}
 
-FastAPI application file:
-Application router file:
-Route file:
-Response model:
-Route handler function:
+FastAPI application file:main.py
+Application router file:router.py
+Route file:health.py
+Response model:common.py
+Route handler function:router.py
 ```
 
 Then draw the request flow from Postman to the returned JSON.
