@@ -18,6 +18,14 @@ class TicketCategories(str, Enum):
     GENERAL = "general"
     OTHER = "other"
 
+class TicketStatus(str, Enum):
+    NEW = "new"
+    ANALYSED = "analysed"
+    PROCESSED = "processed"
+    ESCALATED = "escalated"
+    NEEDS_HUMAN_REVIEW = "needs_human_review"
+    PROCESSING_FAILED = "processing_failed"
+    CLOSED = "closed"
 
 class Sentiment(str, Enum):
     POSITIVE = "positive"

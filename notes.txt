@@ -102,3 +102,8 @@ The customer sounds frustrated and probably needs someone to check the order.
   "faq_query": null,
   "human_review_reason": null
 }
+
+customer messaage -> customerid + orderid -> OrderRepository -> OrderContext + customer message -> claude
+
+
+question -> FAQREpo -> approved canditdates -> claude -> supported answer? -> app fallback

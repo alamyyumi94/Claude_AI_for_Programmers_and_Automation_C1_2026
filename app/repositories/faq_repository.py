@@ -1,91 +1,173 @@
+# Any is used because the repository receives a database object whose exact
+# MongoDB client/database type is not being enforced here.
 from typing import Any
 
-from app.schemas.common import TicketCategories
-from app.schemas.faq import FaqEntry
+# FAQSource is the Pydantic model used to validate and shape FAQ records
+# before they leave the repository layer.
+from app.schemas.faq import FAQSource
 
 
-# Projection is an allowlist of fields the repository returns to the app.
-FAQ_PROJECTION = {
+# MongoDB projection defining exactly which FAQ fields are allowed to leave
+# the repository and become application/AI context.
+#
+# _id is excluded because the application uses faq_id instead.
+FAQ_SOURCE_PROJECTION = {
     "_id": 0,
     "faq_id": 1,
     "category": 1,
     "question": 1,
     "answer": 1,
-    "keywords": 1,
-    "active": 1,
-    "updated_at": 1,
 }
 
 
-class FaqRepository:
+class FAQRepository:
+    # The repository receives the database dependency instead of creating
+    # its own database connection.
     def __init__(
         self,
         database: Any,
     ) -> None:
-        # Repositories own database access; ClaudeService does not.
+        # Work specifically with the MongoDB "faqs" collection.
         self.collection = database.faqs
+
+
+    async def get_by_ids(
+        self,
+        # List of FAQ IDs requested by another part of the application.
+        faq_ids: list[str],
+        *,
+        # Do not return more than three FAQs by default.
+        limit: int = 3,
+    ) -> list[FAQSource]:
+
+        # Remove duplicate IDs while preserving their original order,
+        # then restrict how many records we are prepared to retrieve.
+        requested_ids = list(
+            dict.fromkeys(faq_ids)
+        )[:limit]
+
+        # Avoid making a database query if there are no IDs to search for.
+        if not requested_ids:
+            return []
+
+        # Query MongoDB for FAQs whose faq_id is in the requested list.
+        # Only records marked active=True are considered approved for use.
+        cursor = self.collection.find(
+            {
+                "faq_id": {
+                    "$in": requested_ids,
+                },
+                "active": True,
+            },
+
+            # Return only the approved fields defined in our projection.
+            FAQ_SOURCE_PROJECTION,
+        )
+
+        # Store matched FAQ objects by faq_id so we can restore the caller's
+        # requested order after MongoDB returns the records.
+        found: dict[
+            str,
+            FAQSource,
+        ] = {}
+
+        # MongoDB returns an asynchronous cursor, so iterate over it with async for.
+        async for document in cursor:
+            # Validate the raw MongoDB document against our FAQSource schema.
+            faq = FAQSource.model_validate(
+                document
+            )
+
+            # Store the validated FAQ using its ID as the lookup key.
+            found[faq.faq_id] = faq
+
+        # Return only FAQs that were actually found, while preserving the same
+        # order in which their IDs were originally requested.
+        return [
+            found[faq_id]
+            for faq_id in requested_ids
+            if faq_id in found
+        ]
+
 
     async def search(
         self,
+        # Search text supplied by the application.
         query: str,
-        category: TicketCategories | None = None,
-        limit: int = 5,
-    ) -> list[FaqEntry]:
-        """Full-text search over question, answer and keywords.
+        *,
+        # Keep retrieved FAQ context intentionally small.
+        limit: int = 3,
+    ) -> list[FAQSource]:
 
-        Relies on the faq_text_search index created by scripts/seed_database.py.
-        Inactive entries are never returned, so the AI cannot quote a
-        withdrawn policy.
-        """
-        filters: dict[str, Any] = {
-            "$text": {"$search": query},
-            "active": True,
-        }
-        if category is not None:
-            filters["category"] = category.value
+        # Remove unnecessary whitespace before using the text in a search.
+        search_query = query.strip()
 
+        # Do not send an empty search to MongoDB.
+        if not search_query:
+            return []
+
+        # Force the result count into a safe range of 1 to 3 records.
+        # Even if a caller asks for 100 results, this repository will return at most 3.
+        safe_limit = max(
+            1,
+            min(limit, 3),
+        )
+
+        # MongoDB performs the retrieval and relevance ranking.
+        # Claude is not given direct access to browse or query the FAQ collection.
+        pipeline = [
+
+            # Stage 1: keep only active FAQs whose indexed text matches the query.
+            {
+                "$match": {
+                    "active": True,
+                    "$text": {
+                        "$search":
+                            search_query,
+                    },
+                }
+            },
+
+            # Stage 2: rank the matched FAQs by MongoDB's text-search relevance score.
+            {
+                "$sort": {
+                    "score": {
+                        "$meta":
+                            "textScore",
+                    }
+                }
+            },
+
+            # Stage 3: restrict the amount of FAQ context returned downstream.
+            {
+                "$limit": safe_limit,
+            },
+
+            # Stage 4: expose only approved FAQ fields.
+            {
+                "$project":
+                    FAQ_SOURCE_PROJECTION,
+            },
+        ]
+
+        # Execute the MongoDB aggregation pipeline.
         cursor = (
-            self.collection.find(filters, projection=FAQ_PROJECTION)
-            # Best text match first. Sorting on the meta field does not require
-            # projecting the score, which would break FaqEntry's extra="forbid".
-            .sort([("score", {"$meta": "textScore"})])
-            .limit(limit)
+            await self.collection.aggregate(
+                pipeline
+            )
         )
 
-        return [FaqEntry.model_validate(document) async for document in cursor]
+        # Final validated FAQ records will be collected here.
+        results: list[FAQSource] = []
 
-    async def get_by_id(
-        self,
-        faq_id: str,
-    ) -> FaqEntry | None:
-        document = await self.collection.find_one(
-            {"faq_id": faq_id},
-            projection=FAQ_PROJECTION,
-        )
-        return FaqEntry.model_validate(document) if document else None
+        # Read each MongoDB result asynchronously.
+        async for document in cursor:
+            # Validate each database record before adding it to the result list.
+            results.append(
+                FAQSource.model_validate(
+                    document
+                )
+            )
 
-    async def list_active(
-        self,
-        category: TicketCategories | None = None,
-        limit: int = 20,
-    ) -> list[FaqEntry]:
-        """Active entries, optionally narrowed to one category.
-
-        Used when there is no search query. Without a category this lists
-        every active entry.
-        """
-        filters: dict[str, Any] = {"active": True}
-        if category is not None:
-            filters["category"] = category.value
-
-        cursor = (
-            self.collection.find(filters, projection=FAQ_PROJECTION)
-            .sort("faq_id")
-            .limit(limit)
-        )
-
-        return [FaqEntry.model_validate(document) async for document in cursor]
-
-    async def count_active(self) -> int:
-        """Total active entries, for FaqListResponse.total."""
-        return await self.collection.count_documents({"active": True})
+        # Return clean, validated FAQSource objects to the application layer.
+        return results

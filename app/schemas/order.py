@@ -2,11 +2,9 @@ from datetime import datetime
 from enum import Enum
 
 from pydantic import Field
-from app.schemas.common import StricModel
+from app.schemas.common import StrictModel
 
-# Restrict order status to only the allowed values
-
-
+# Restrict order status to know app values
 class OrderStatus(str, Enum):
     DELAYED = "delayed"
     PROCESSING = "processing"
@@ -15,22 +13,25 @@ class OrderStatus(str, Enum):
     CANCELLED = "cancelled"
     RETURNED = "returned"
 
-
-class OrderItem(StricModel):
+# Only include fields that are relevant to the app's functionality
+class OrderItem(StrictModel):
     sku: str = Field(
-        min_length=1, max_length=50, description="Stock Keeping Unit of the item"
+        min_length=1,
+        max_length=50,
     )
-    name: str = Field(min_length=1, max_length=100, description="Name of the item")
-    quantity: int = Field(ge=1, description="Quantity of the item ordered")
+    name: str = Field(
+            min_length=1,
+            max_length=100,
+    )
+    quantity: int = Field(ge=1)
 
-
-class OrderContext(StricModel):
+# Trusted subset of order that may be passed to Claude
+class OrderContext(StrictModel):
     order_id: str = Field(
-        min_length=1, max_length=50, description="Unique identifier for the order"
+        min_length=3,
+        max_length=50,
     )
-    status: OrderStatus = Field(description="Current status of the order")
-    items: list[OrderItem] = Field(
-        min_length=1, description="List of items in the order"
-    )
+    status: OrderStatus
+    items: list[OrderItem]
     estimated_delivery: datetime | None = None
     delivered_at: datetime | None = None

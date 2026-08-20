@@ -1,43 +1,52 @@
-from datetime import datetime
-
 from pydantic import Field
 
-from app.schemas.common import StricModel, TicketCategories
+from app.schemas.common import (
+    StrictModel,
+    TicketCategory,
+)
+from app.schemas.usage import AIUsage
 
 
-class FaqEntry(StricModel):
-    """A single approved FAQ / policy answer the AI is allowed to rely on."""
-
+class FAQSource(StrictModel):
+    # Approved source data retrieved from MongoDB.
     faq_id: str = Field(
-        min_length=1, max_length=50, description="Unique identifier for the FAQ entry"
+        min_length=3,
+        max_length=50,
     )
-    category: TicketCategories = Field(
-        description="Ticket category this entry answers, matching TicketAnalysis.category"
-    )
+    category: TicketCategory
     question: str = Field(
-        min_length=5, max_length=300, description="Customer-facing question"
+        min_length=3,
+        max_length=500,
     )
     answer: str = Field(
-        min_length=5,
+        min_length=3,
         max_length=2000,
-        description="Approved answer. Only this text may be quoted back to a customer.",
     )
-    keywords: list[str] = Field(
+
+
+class FAQAnswerDecision(StrictModel):
+    # Claude must state both its answer and whether the supplied sources support it.
+    answer: str = Field(
         min_length=1,
-        description="Search terms used to match a customer message to this entry",
+        max_length=2000,
     )
-    active: bool = Field(
-        default=True, description="Inactive entries must not be used in responses"
+    supported_by_sources: bool
+
+
+class FAQAskRequest(StrictModel):
+    question: str = Field(
+        min_length=5,
+        max_length=1000,
     )
-    updated_at: datetime = Field(description="When the entry was last approved")
 
 
-class FaqSearchRequest(StricModel):
-    query: str = Field(min_length=2, max_length=500)
-    category: TicketCategories | None = None
-    limit: int = Field(default=5, ge=1, le=20)
-
-
-class FaqListResponse(StricModel):
-    items: list[FaqEntry]
-    total: int = Field(ge=0)
+class FAQAskResponse(StrictModel):
+    answer: str = Field(
+        min_length=1,
+        max_length=2000,
+    )
+    sources: list[FAQSource] = Field(
+        default_factory=list,
+    )
+    requires_human_review: bool
+    usage: AIUsage | None = None

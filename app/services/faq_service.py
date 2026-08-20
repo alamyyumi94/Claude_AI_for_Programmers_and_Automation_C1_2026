@@ -1,72 +1,101 @@
-from __future__ import annotations
+from dataclasses import dataclass
 
-import logging
+from app.core.prompt_data import (
+    serialize_prompt_payload,
+)
+from app.prompts.faq_answer import (
+    FAQ_ANSWER_SYSTEM_PROMPT,
+)
+from app.repositories.faq_repository import (
+    FAQRepository,
+)
+from app.schemas.faq import (
+    FAQAnswerDecision,
+    FAQSource,
+)
+from app.services.claude_service import (
+    ClaudeService,
+)
 
-from app.repositories.faq_repository import FaqRepository
-from app.schemas.common import TicketCategories
-from app.schemas.faq import FaqEntry, FaqListResponse, FaqSearchRequest
 
-logger = logging.getLogger(__name__)
+# Application-owned fallback used when approved evidence is unavailable.
+NO_APPROVED_FAQ_ANSWER = (
+    "I couldn't find approved FAQ "
+    "information that answers this "
+    "question. Please refer this "
+    "request for human review."
+)
 
+class FAQAnswerResult:
+    answer: str
+    sources: list[FAQSource]
+    requires_human_review: bool
+    model: str | None
+    input_tokens: int | None
+    output_tokens: int | None
 
-class FaqService:
-    """Serves approved FAQ / policy entries.
-
-    Services own the flow; repositories own storage and database access.
-
-    Attributes:
-        faq_repository: Repository for FAQ read operations.
-    """
-
-    def __init__(self, faq_repository: FaqRepository) -> None:
-        self._faq_repository = faq_repository
-
-    async def search(self, request: FaqSearchRequest) -> FaqListResponse:
-        """Full-text search over approved FAQ entries.
-
-        Args:
-            request: The search query, optional category filter and result limit.
-
-        Returns:
-            Matching entries plus the total number of active entries.
-        """
-        items = await self._faq_repository.search(
-            query=request.query,
-            category=request.category,
-            limit=request.limit,
-        )
-        logger.debug("FAQ search for %r returned %d entries", request.query, len(items))
-        return FaqListResponse(
-            items=items,
-            total=await self._faq_repository.count_active(),
-        )
-
-    async def list_faqs(
+class FAQService:
+    def __init__(
         self,
-        category: TicketCategories | None = None,
-        limit: int = 20,
-    ) -> FaqListResponse:
-        """List active entries, used when there is no search query.
+        faq_repository: FAQRepository,
+        claude_service: ClaudeService,
+    ) -> None:
+        self.faq_repository = faq_repository
+        self.claude_service = claude_service
 
-        Args:
-            category: Optional ticket category filter. None lists every category.
-            limit: Maximum number of entries to return.
-
-        Returns:
-            Matching active entries plus the total number of active entries.
-        """
-        return FaqListResponse(
-            items=await self._faq_repository.list_active(category, limit=limit),
-            total=await self._faq_repository.count_active(),
+    async def ask(
+        self,
+        question: str,
+    ) -> FAQAnswerResult:
+        # Retrieve approved FAQ sources from the repository.
+        sources = await self.faq_repository.search(
+            question,
+            limit=3,
         )
 
-    async def get_faq(self, faq_id: str) -> FaqEntry | None:
-        """Retrieve a single FAQ entry by its ID.
+        # If no approved FAQ sources are found, return a fallback answer.
+        if not sources:
+            return FAQAnswerResult(
+                answer=NO_APPROVED_FAQ_ANSWER,
+                sources=[],
+                requires_human_review=True,
+                model=None,
+                input_tokens=None,
+                output_tokens=None,
+            )
 
-        Args:
-            faq_id: The unique identifier of the FAQ entry.
+        # Serialize the prompt payload for Claude.
+        payload = {
+            "customer_question": question,
+            "approved_faq_sources": [
+                source.model_dump(
+                    mode="json",
+                )
+                for source in sources
+            ],
+        }
 
-        Returns:
-            The entry if found, None otherwise.
-        """
-        return await self._faq_repository.get_by_id(faq_id)
+        result = (
+            await self.claude_service
+            .generate_structured(
+                serialize_prompt_payload(
+                    payload
+                ), 
+                system= FAQ_ANSWER_SYSTEM_PROMPT,
+                output_model=(
+                    FAQAnswerDecision,
+                ),
+                max_tokens=300,
+            )
+        )
+
+        return FAQAnswerResult(
+            answer=result.data.answer,
+            sources=sources,
+            requires_human_review=(
+                not result.data.supported_by_sources
+            ),
+            model=result.model,
+            input_tokens=result.input_tokens_used,
+            output_tokens=result.output_tokens_used,
+        )

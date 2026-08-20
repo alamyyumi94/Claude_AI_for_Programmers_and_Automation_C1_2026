@@ -1,40 +1,71 @@
-from typing import Annotated
+from fastapi import APIRouter
 
-from fastapi import APIRouter, HTTPException, Query
+from app.database import get_database
+from app.repositories.faq_repository import (
+    FAQRepository,
+)
+from app.schemas.faq import (
+    FAQAskRequest,
+    FAQAskResponse,
+)
+from app.schemas.usage import AIUsage
+from app.services import faq_service
+from app.services.claude_service import (
+    ClaudeService,
+)
+from app.services.faq_service import (
+    FAQService,
+)
 
-from app.api.dependencies import FaqServiceDep
-from app.schemas.common import TicketCategories
-from app.schemas.faq import FaqEntry, FaqListResponse, FaqSearchRequest
+router = APIRouter(
+    prefix="/faq",
+    tags=["faq"],
+)
 
-router = APIRouter(prefix="/faqs", tags=["FAQs"])
+@router.post(
+    "/ask",
+    response_model=FAQAskResponse,
+)
+async def ask_faq(
+    request: FAQAskRequest,
+) -> FAQAskResponse:
+    claude_service = ClaudeService()
+
+    # Compose the service from the Claude and MongoDB boundaries
+    service = FAQService(
+        faq_repository=FAQRepository(
+            get_database()
+        ),
+        claude_service=claude_service,
+    )
+
+    try:
+        result = await service.ask(
+            request.question,
+        )
+    finally:
+        await claude_service.close()
+
+    usage = None
+
+    if result.model is not None:
+        usage = AIUsage(
+            model=result.model,
+            input_tokens=(
+                result.input_tokens or 0
+            ),
+            output_tokens=(
+                result.output_tokens or 0
+            ),
+        )
 
 
-@router.post("/search", response_model=FaqListResponse)
-async def search_faqs(
-    input: FaqSearchRequest,
-    faq_service: FaqServiceDep,
-) -> FaqListResponse:
-    """Full-text search over approved FAQ entries."""
-    return await faq_service.search(input)
-
-
-@router.get("", response_model=FaqListResponse)
-async def list_faqs(
-    faq_service: FaqServiceDep,
-    category: Annotated[TicketCategories | None, Query()] = None,
-    limit: Annotated[int, Query(ge=1, le=100)] = 20,
-) -> FaqListResponse:
-    """List active FAQ entries, optionally filtered by category."""
-    return await faq_service.list_faqs(category, limit=limit)
-
-
-@router.get("/{faq_id}", response_model=FaqEntry)
-async def get_faq(
-    faq_id: str,
-    faq_service: FaqServiceDep,
-) -> FaqEntry:
-    """Retrieve a single FAQ entry by id."""
-    faq = await faq_service.get_faq(faq_id)
-    if faq is None:
-        raise HTTPException(status_code=404, detail="FAQ not found.")
-    return faq
+    return FAQAskResponse(
+        answer=result.answer,
+        sources=result.sources,
+        requires_human_review=result.requires_human_review,
+        model=result.model,
+        input_tokens=result.input_tokens,
+        output_tokens=result.output_tokens,
+        usage=usage,
+    )
