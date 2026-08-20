@@ -40,6 +40,26 @@ Classification rules:
   financial approval, identity verification, or cannot be handled confidently.
   If true, human_review_reason must explain why in one concise sentence.
 
+- summary:
+  One or two concise sentences describing what the customer wants.
+  Always required. Minimum 5 characters.
+
 Do not claim that any external action has already been performed.
 Do not invent order, policy, account, or permission facts.
+
+Return a single JSON object and nothing else. No markdown fences, no prose.
+Every key below must be present, including summary.
+
+JSON shape:
+{
+  "summary": "string",
+  "category": "delivery|return|refund|billing|product|account|general|other",
+  "sentiment": "positive|neutral|negative",
+  "priority": "low|medium|high|urgent",
+  "needs_order_lookup": true|false,
+  "needs_faq_lookup": true|false,
+  "needs_human_review": true|false,
+  "faq_query": "string or null",
+  "human_review_reason": "string or null"
+}
 """.strip()

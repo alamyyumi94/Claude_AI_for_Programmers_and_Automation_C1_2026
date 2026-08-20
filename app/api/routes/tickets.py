@@ -34,7 +34,7 @@ async def list_tickets(
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> TicketListResponse:
     """List stored tickets, newest first insertion order, with pagination."""
-    return ticket_service.list_tickets(skip=skip, limit=limit)
+    return await ticket_service.list_tickets(skip=skip, limit=limit)
 
 
 @router.get("/{ticket_id}", response_model=TicketResponse)
@@ -43,7 +43,7 @@ async def get_ticket(
     ticket_service: TicketServiceDep,
 ) -> TicketResponse:
     """Retrieve a single ticket by id."""
-    ticket = ticket_service.get_ticket(ticket_id)
+    ticket = await ticket_service.get_ticket(ticket_id)
     if ticket is None:
         raise HTTPException(status_code=404, detail="Ticket not found.")
     return ticket
@@ -55,7 +55,7 @@ async def close_ticket(
     ticket_service: TicketServiceDep,
 ) -> TicketResponse:
     """Close a ticket."""
-    ticket = ticket_service.close_ticket(ticket_id)
+    ticket = await ticket_service.close_ticket(ticket_id)
     if ticket is None:
         raise HTTPException(status_code=404, detail="Ticket not found.")
     return ticket

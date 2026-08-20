@@ -5,9 +5,11 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from app.repositories.faq_repository import FaqRepository
 from app.repositories.order_repository import OrderRepository
 from app.repositories.ticket_repository import TicketRepository
 from app.schemas.common import TicketStatus
+from app.schemas.faq import FaqEntry
 from app.schemas.order import OrderContext
 from app.schemas.ticket import (
     TicketCreateRequest,
@@ -28,6 +30,7 @@ class TicketService:
         ticket_repository: Repository for ticket persistence operations.
         analysis_service: Service for AI-powered ticket analysis.
         order_repository: Optional repository for order lookups.
+        faq_repository: Optional repository for FAQ lookups.
     """
 
     def __init__(
@@ -35,10 +38,12 @@ class TicketService:
         ticket_repository: TicketRepository,
         analysis_service: AnalysisService,
         order_repository: OrderRepository | None = None,
+        faq_repository: FaqRepository | None = None,
     ) -> None:
         self._ticket_repository = ticket_repository
         self._analysis_service = analysis_service
         self._order_repository = order_repository
+        self._faq_repository = faq_repository
 
     async def create_ticket(self, request: TicketCreateRequest) -> TicketResponse:
         """Analyse an incoming message, store the ticket, then enrich it.
@@ -58,7 +63,7 @@ class TicketService:
 
         faq_query = [analysis.faq_query] if analysis.needs_faq_lookup and analysis.faq_query else []
 
-        ticket = self._ticket_repository.create(
+        ticket = await self._ticket_repository.create(
             {
                 "customer_id": request.customer_id,
                 "order_id": request.order_id,
@@ -72,7 +77,7 @@ class TicketService:
         logger.info("Created ticket %s for customer %s", ticket.ticket_id, request.customer_id)
         return await self._enrich(ticket)
 
-    def get_ticket(self, ticket_id: str) -> TicketResponse | None:
+    async def get_ticket(self, ticket_id: str) -> TicketResponse | None:
         """Retrieve a ticket by its ID.
 
         Args:
@@ -81,9 +86,9 @@ class TicketService:
         Returns:
             The ticket if found, None otherwise.
         """
-        return self._ticket_repository.get_by_id(ticket_id)
+        return await self._ticket_repository.get_by_id(ticket_id)
 
-    def list_tickets(self, *, skip: int = 0, limit: int = 50) -> TicketListResponse:
+    async def list_tickets(self, *, skip: int = 0, limit: int = 50) -> TicketListResponse:
         """List tickets with pagination.
 
         Args:
@@ -94,13 +99,13 @@ class TicketService:
             Paginated list of tickets with total count.
         """
         return TicketListResponse(
-            items=self._ticket_repository.get_all(skip=skip, limit=limit),
-            total=self._ticket_repository.count(),
+            items=await self._ticket_repository.get_all(skip=skip, limit=limit),
+            total=await self._ticket_repository.count(),
             limit=limit,
             skip=skip,
         )
 
-    def close_ticket(self, ticket_id: str) -> TicketResponse | None:
+    async def close_ticket(self, ticket_id: str) -> TicketResponse | None:
         """Close a ticket by setting its status to CLOSED.
 
         Args:
@@ -109,7 +114,7 @@ class TicketService:
         Returns:
             The updated ticket if found, None otherwise.
         """
-        ticket = self._ticket_repository.update(ticket_id, {"status": TicketStatus.CLOSED})
+        ticket = await self._ticket_repository.update(ticket_id, {"status": TicketStatus.CLOSED})
         if ticket:
             logger.info("Closed ticket %s", ticket_id)
         return ticket
@@ -125,6 +130,9 @@ class TicketService:
         """
         updates: dict[str, Any] = {}
 
+        if ticket.faq_query:
+            updates["faq_context"] = await self._lookup_faqs(ticket)
+
         if ticket.analysis.needs_order_lookup:
             order_context = await self._safe_lookup_order(ticket)
             if order_context is None:
@@ -134,7 +142,7 @@ class TicketService:
             updates["order_context"] = order_context
 
         if ticket.analysis.needs_human_review:
-            return self._escalate_to_human(
+            return await self._escalate_to_human(
                 ticket,
                 escalation_reason=ticket.analysis.human_review_reason,
                 additional_updates=updates,
@@ -142,7 +150,44 @@ class TicketService:
 
         updates["status"] = TicketStatus.PROCESSED
         logger.debug("Ticket %s processed successfully", ticket.ticket_id)
-        return self._ticket_repository.update(ticket.ticket_id, updates)
+        return await self._ticket_repository.update(ticket.ticket_id, updates)
+
+    async def _lookup_faqs(self, ticket: TicketResponse) -> list[FaqEntry]:
+        """Fetch approved FAQ entries matching the analysis query.
+
+        FAQ context only improves a draft response, so a lookup failure must
+        never fail the ticket. On any error the ticket keeps an empty context
+        and the reason is logged.
+
+        Args:
+            ticket: The ticket whose faq_query should be searched.
+
+        Returns:
+            Matching FAQ entries, or an empty list if none matched or the
+            lookup failed.
+        """
+        if self._faq_repository is None:
+            logger.warning(
+                "Ticket %s asked for FAQ lookup but no FAQ repository is configured.",
+                ticket.ticket_id,
+            )
+            return []
+
+        # faq_query holds one query per analysis; a space-joined string lets the
+        # Mongo text index score every term at once.
+        query = " ".join(ticket.faq_query)
+
+        try:
+            # Deliberately unfiltered by category: text relevance recalls useful
+            # cross-category entries the analysis category would exclude.
+            return await self._faq_repository.search(query)
+        except (RuntimeError, ValidationError) as exc:
+            logger.warning(
+                "FAQ lookup failed for ticket %s: %s",
+                ticket.ticket_id,
+                exc,
+            )
+            return []
 
     async def _handle_order_lookup(self, ticket: TicketResponse) -> TicketResponse:
         """Handle order lookup with proper error handling and escalation.
@@ -164,13 +209,13 @@ class TicketService:
                 ticket.ticket_id,
                 exc,
             )
-            return self._escalate_to_human(
+            return await self._escalate_to_human(
                 ticket,
                 processing_error=f"Order lookup failed: {exc}",
             )
 
         if order_context is None:
-            return self._escalate_to_human(
+            return await self._escalate_to_human(
                 ticket,
                 escalation_reason="Order lookup required but no matching order found.",
             )
@@ -231,7 +276,7 @@ class TicketService:
         # Let ValidationError propagate - caller should handle it appropriately.
         return OrderContext.model_validate(document)
 
-    def _escalate_to_human(
+    async def _escalate_to_human(
         self,
         ticket: TicketResponse,
         *,
@@ -264,4 +309,4 @@ class TicketService:
             escalation_reason,
             processing_error,
         )
-        return self._ticket_repository.update(ticket.ticket_id, updates)
+        return await self._ticket_repository.update(ticket.ticket_id, updates)

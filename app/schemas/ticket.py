@@ -7,6 +7,8 @@ from app.schemas.ai import TicketAnalysis
 
 from app.schemas.order import OrderContext
 
+from app.schemas.faq import FaqEntry
+
 
 class TicketCreateRequest(StricModel):
     customer_id: str
@@ -23,7 +25,9 @@ class TicketResponse(StricModel):
     analysis: TicketAnalysis
 
     order_context: OrderContext | None = None
-    faq_query: list[str]
+    # What we searched the FAQ store for, and what came back.
+    faq_query: list[str] = []
+    faq_context: list[FaqEntry] = []
 
     status: TicketStatus
     escalation_reason: str | None = None
