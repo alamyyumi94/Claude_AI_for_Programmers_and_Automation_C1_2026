@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, model_validator
+from pydantic import Field, model_validator
 
 from app.schemas.common import StricModel, TicketCategories, Sentiment, Priority
 
@@ -44,3 +44,8 @@ class TicketAnalysis(StricModel):
                 "human_review_reason must be provided if needs_human_review is True"
             )
         return self
+
+
+class AnalyseResponse(StricModel):
+    analysis: TicketAnalysis
+    usage: AIUsage

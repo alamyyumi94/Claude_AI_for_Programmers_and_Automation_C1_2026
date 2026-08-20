@@ -1,6 +1,5 @@
+import json
 from dataclasses import dataclass
-from functools import lru_cache
-
 from typing import Generic, TypeVar
 
 from anthropic import AsyncAnthropic
@@ -17,9 +16,20 @@ class ClaudeResponseError(RuntimeError):
     pass
 
 
+ModelT = TypeVar("ModelT", bound=BaseModel)
+
+
 @dataclass(frozen=True)
 class ClaudeTextResult:
     text: str
+    model: str
+    input_tokens: int
+    output_tokens: int
+
+
+@dataclass(frozen=True)
+class ClaudeStructuredResult(Generic[ModelT]):
+    data: ModelT
     model: str
     input_tokens: int
     output_tokens: int
@@ -73,5 +83,61 @@ class ClaudeService:
             output_tokens=message.usage.output_tokens,
         )
 
+    async def generate_structured(
+        self,
+        user_message: str,
+        *,
+        schema: type[ModelT],
+        max_tokens: int = 600,
+        system: str | None = None,
+    ) -> ClaudeStructuredResult[ModelT]:
+        result = await self.generate_text(
+            user_message=user_message,
+            max_tokens=max_tokens,
+            system=system,
+        )
+
+        payload = _extract_json_object(result.text)
+
+        try:
+            data = schema.model_validate(payload)
+        except ValidationError as e:
+            raise ClaudeResponseError(
+                f"Claude returned JSON that does not match {schema.__name__}: {e}"
+            ) from e
+
+        return ClaudeStructuredResult(
+            data=data,
+            model=result.model,
+            input_tokens=result.input_tokens,
+            output_tokens=result.output_tokens,
+        )
+
     async def close(self) -> None:
         await self.client.close()
+
+
+def _extract_json_object(text: str) -> dict:
+    """Parse the first JSON object in a Claude reply, tolerating code fences."""
+    candidate = text.strip()
+
+    if candidate.startswith("```"):
+        candidate = candidate.split("```")[1]
+        if candidate.lstrip().lower().startswith("json"):
+            candidate = candidate.lstrip()[4:]
+        candidate = candidate.strip()
+
+    start = candidate.find("{")
+    end = candidate.rfind("}")
+    if start == -1 or end == -1 or end < start:
+        raise ClaudeResponseError("Claude did not return a JSON object.")
+
+    try:
+        payload = json.loads(candidate[start : end + 1])
+    except json.JSONDecodeError as e:
+        raise ClaudeResponseError(f"Claude returned invalid JSON: {e}") from e
+
+    if not isinstance(payload, dict):
+        raise ClaudeResponseError("Claude returned JSON that is not an object.")
+
+    return payload
