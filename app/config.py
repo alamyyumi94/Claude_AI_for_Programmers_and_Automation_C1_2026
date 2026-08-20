@@ -17,7 +17,11 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
-    
+
+    mongodb_uri: SecretStr = SecretStr("mongodb://localhost:27017")
+    mongodb_database: str = Field(default="support_systems_ai")
+
+
 @lru_cache()
 def get_settings() -> Settings:
     return Settings()

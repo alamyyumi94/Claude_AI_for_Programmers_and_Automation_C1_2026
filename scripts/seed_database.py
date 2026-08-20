@@ -12,7 +12,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.database import (  # noqa: E402
-    close_database,
+    close_database_connection,
     connect_to_database,
     get_database,
 )
@@ -116,13 +116,9 @@ async def seed(reset: bool) -> None:
         print(f"Orders available: {order_count}")
         print(f"FAQs available: {faq_count}")
         print("Indexes: ready")
-        print(
-            "Mode: reset and seed"
-            if reset
-            else "Mode: idempotent upsert"
-        )
+        print("Mode: reset and seed" if reset else "Mode: idempotent upsert")
     finally:
-        await close_database()
+        await close_database_connection()
 
 
 def main() -> None:
