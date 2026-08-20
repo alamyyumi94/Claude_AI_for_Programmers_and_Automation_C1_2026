@@ -101,15 +101,12 @@ async def process_order(input: GenerateResponseRequest) -> GenerateResponseRespo
     if document is None:
         raise HTTPException(status_code=404, detail="Order not found for customer.")
 
-    order_context = OrderContext.model_validate(document)
-
     claude_service = ClaudeService()
     response_service = ResponseService(claude_service=claude_service)
     try:
         result = await response_service.generate(
             customer_message=(
-                f"{input.customer_message}\n\n"
-                f"Order context (JSON):\n{order_context.model_dump_json()}"
+                f"{input.customer_message}\n\nOrder context (JSON):{document}"
             ),
         )
     except Exception as e:

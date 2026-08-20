@@ -57,8 +57,8 @@ class GenerateResponseRequest(StricModel):
         min_length=5,
         max_length=5000,
     )
-    customer_id: str = Field(min_length=1, max_length=100)
-    order_id: str = Field(min_length=1, max_length=100)
+    customer_id: str | None = None
+    order_id: str | None = None
 
 
 class GenerateResponseResponse(StricModel):
