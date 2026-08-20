@@ -6,7 +6,7 @@ from app.schemas.usage import AIUsage
 
 
 class SummariseRequest(StricModel):
-    text: str = Field(min_length=20, max_length=5000)
+    text: str = Field(min_length=1, max_length=5000)
 
 
 class SummariseResponse(StricModel):
@@ -44,6 +44,30 @@ class TicketAnalysis(StricModel):
                 "human_review_reason must be provided if needs_human_review is True"
             )
         return self
+
+
+class ResponseContextUsed(StricModel):
+    customer_id: str = Field(min_length=1, max_length=100)
+    order_id: str = Field(min_length=1, max_length=100)
+    draft_response: str | None = None
+
+
+class GenerateResponseRequest(StricModel):
+    customer_message: str = Field(
+        min_length=5,
+        max_length=5000,
+    )
+    customer_id: str = Field(min_length=1, max_length=100)
+    order_id: str = Field(min_length=1, max_length=100)
+
+
+class GenerateResponseResponse(StricModel):
+    draft_response: str = Field(
+        min_length=1,
+        max_length=5000,
+    )
+    context_used: ResponseContextUsed
+    usage: AIUsage
 
 
 class AnalyseResponse(StricModel):
