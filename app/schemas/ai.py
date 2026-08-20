@@ -2,27 +2,27 @@ from enum import Enum
 
 from pydantic import Field, model_validator
 
-from app.schemas.common import StricModel, TicketCategories, Sentiment, Priority
+from app.schemas.common import StrictModel, TicketCategories, Sentiment, Priority
 
 from app.schemas.usage import AIUsage
 
 
-class SummariseRequest(StricModel):
+class SummariseRequest(StrictModel):
     text: str = Field(min_length=1, max_length=5000)
 
 
-class SummariseResponse(StricModel):
+class SummariseResponse(StrictModel):
     summary: str
     model: str
     input_tokens: int
     output_tokens: int
 
 
-class AnalyseRequest(StricModel):
+class AnalyseRequest(StrictModel):
     text: str = Field(min_length=5, max_length=5000)
 
 
-class TicketAnalysis(StricModel):
+class TicketAnalysis(StrictModel):
     summary: str = Field(min_length=5, max_length=5000)
 
     category: TicketCategories
@@ -48,10 +48,9 @@ class TicketAnalysis(StricModel):
         return self
 
 
-class ResponseContextUsed(StricModel):
-    customer_id: str = Field(min_length=1, max_length=100)
-    order_id: str = Field(min_length=1, max_length=100)
-    draft_response: str | None = None
+class AnalyseResponse(StrictModel):
+    analysis: TicketAnalysis
+    usage: AIUsage
 
 
 class GenerateResponseRequest(StrictModel):
@@ -60,9 +59,6 @@ class GenerateResponseRequest(StrictModel):
         min_length=5,
         max_length=5000,
     )
-    customer_id: str | None = None
-    order_id: str | None = None
-
     # Customer and Order intentifiers
     customer_id: str | None = Field(
         default=None,
@@ -94,7 +90,7 @@ class ResponseContextUsed(StrictModel):
     # Make trusted context available to the app for logging and debugging purposes. This is not sent to Claude.
     order_id: str | None = None
 
-class GenerateResponseResponse(StricModel):
+class GenerateResponseResponse(StrictModel):
     draft_response: str = Field(
         min_length=1,
         max_length=5000,

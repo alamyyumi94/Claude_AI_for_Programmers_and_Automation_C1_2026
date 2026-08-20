@@ -12,4 +12,12 @@ Rules:
 - if the sources do not adequately answer the
   question, set supported_by_sources to false
 - keep the answer concise
+
+Return a single JSON object and nothing else. No markdown fences, no prose.
+
+JSON shape:
+{
+  "answer": "string",
+  "supported_by_sources": true|false
+}
 """.strip()

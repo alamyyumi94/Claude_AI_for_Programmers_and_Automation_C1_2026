@@ -28,5 +28,7 @@ class AnalysisService:
             user_prompt,
             system=TICKET_ANALYSIS_SYSTEM_PROMPT,
             schema=TicketAnalysis,
-            max_tokens=500,
+            # claude-sonnet-5 spends output tokens on thinking before the JSON,
+            # so the budget must cover both or the reply comes back empty.
+            max_tokens=1500,
         )

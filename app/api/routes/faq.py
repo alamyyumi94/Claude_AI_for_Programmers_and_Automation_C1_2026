@@ -1,26 +1,17 @@
 from fastapi import APIRouter
 
-from app.database import get_database
-from app.repositories.faq_repository import (
-    FAQRepository,
-)
+from app.api.dependencies import FAQServiceDep
 from app.schemas.faq import (
     FAQAskRequest,
     FAQAskResponse,
 )
 from app.schemas.usage import AIUsage
-from app.services import faq_service
-from app.services.claude_service import (
-    ClaudeService,
-)
-from app.services.faq_service import (
-    FAQService,
-)
 
 router = APIRouter(
     prefix="/faq",
     tags=["faq"],
 )
+
 
 @router.post(
     "/ask",
@@ -28,23 +19,9 @@ router = APIRouter(
 )
 async def ask_faq(
     request: FAQAskRequest,
+    faq_service: FAQServiceDep,
 ) -> FAQAskResponse:
-    claude_service = ClaudeService()
-
-    # Compose the service from the Claude and MongoDB boundaries
-    service = FAQService(
-        faq_repository=FAQRepository(
-            get_database()
-        ),
-        claude_service=claude_service,
-    )
-
-    try:
-        result = await service.ask(
-            request.question,
-        )
-    finally:
-        await claude_service.close()
+    result = await faq_service.ask(request.question)
 
     usage = None
 
@@ -59,13 +36,10 @@ async def ask_faq(
             ),
         )
 
-
+    # Model/token details are exposed through `usage`; FAQAskResponse forbids extras.
     return FAQAskResponse(
         answer=result.answer,
         sources=result.sources,
         requires_human_review=result.requires_human_review,
-        model=result.model,
-        input_tokens=result.input_tokens,
-        output_tokens=result.output_tokens,
         usage=usage,
     )

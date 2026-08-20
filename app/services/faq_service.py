@@ -26,6 +26,7 @@ NO_APPROVED_FAQ_ANSWER = (
     "request for human review."
 )
 
+@dataclass(frozen=True)
 class FAQAnswerResult:
     answer: str
     sources: list[FAQSource]
@@ -81,11 +82,11 @@ class FAQService:
                 serialize_prompt_payload(
                     payload
                 ), 
-                system= FAQ_ANSWER_SYSTEM_PROMPT,
-                output_model=(
-                    FAQAnswerDecision,
-                ),
-                max_tokens=300,
+                system=FAQ_ANSWER_SYSTEM_PROMPT,
+                schema=FAQAnswerDecision,
+                # claude-sonnet-5 thinks before answering, so the budget must
+                # cover the thinking tokens as well as the JSON reply.
+                max_tokens=1200,
             )
         )
 
@@ -96,6 +97,6 @@ class FAQService:
                 not result.data.supported_by_sources
             ),
             model=result.model,
-            input_tokens=result.input_tokens_used,
-            output_tokens=result.output_tokens_used,
+            input_tokens=result.input_tokens,
+            output_tokens=result.output_tokens,
         )

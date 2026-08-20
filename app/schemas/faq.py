@@ -2,7 +2,7 @@ from pydantic import Field
 
 from app.schemas.common import (
     StrictModel,
-    TicketCategory,
+    TicketCategories,
 )
 from app.schemas.usage import AIUsage
 
@@ -13,7 +13,7 @@ class FAQSource(StrictModel):
         min_length=3,
         max_length=50,
     )
-    category: TicketCategory
+    category: TicketCategories
     question: str = Field(
         min_length=3,
         max_length=500,

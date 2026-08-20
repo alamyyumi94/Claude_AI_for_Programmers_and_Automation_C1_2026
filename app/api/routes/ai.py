@@ -1,5 +1,5 @@
 # FastAPI's APIRouter lets us group related API endpoints together.
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 # System prompt used specifically for the summarisation endpoint.
 from app.prompts.summarise import (
@@ -36,6 +36,7 @@ from app.services.analysis_service import (
 
 # Low-level Claude integration service responsible for communicating with Anthropic.
 from app.services.claude_service import (
+    ClaudeResponseError,
     ClaudeService,
 )
 
@@ -73,8 +74,9 @@ async def summarise_text(
     try:
         # Send the user's text to Claude using the summarisation system prompt.
         result = await claude_service.generate_text(
-            user_message=input.text,
-            max_tokens=300,
+            user_message=request.text,
+            # Budget covers claude-sonnet-5's thinking tokens plus the summary.
+            max_tokens=1000,
             system=SUMMARISE_SYSTEM_PROMPT,
         )
     except Exception as e:
@@ -116,7 +118,7 @@ async def analyse_ticket(
     try:
         # Analyse the customer-support message and return structured output.
         result = await analyse_service.analyse(
-            request.message
+            request.text
         )
     except ClaudeResponseError as e:
         raise HTTPException(status_code=502, detail=str(e)) from e
