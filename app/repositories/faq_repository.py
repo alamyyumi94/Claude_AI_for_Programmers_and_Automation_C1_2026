@@ -64,17 +64,22 @@ class FaqRepository:
         )
         return FaqEntry.model_validate(document) if document else None
 
-    async def list_by_category(
+    async def list_active(
         self,
-        category: TicketCategories,
+        category: TicketCategories | None = None,
         limit: int = 20,
     ) -> list[FaqEntry]:
-        """Active entries for one category, used when there is no search query."""
+        """Active entries, optionally narrowed to one category.
+
+        Used when there is no search query. Without a category this lists
+        every active entry.
+        """
+        filters: dict[str, Any] = {"active": True}
+        if category is not None:
+            filters["category"] = category.value
+
         cursor = (
-            self.collection.find(
-                {"category": category.value, "active": True},
-                projection=FAQ_PROJECTION,
-            )
+            self.collection.find(filters, projection=FAQ_PROJECTION)
             .sort("faq_id")
             .limit(limit)
         )

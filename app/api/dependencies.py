@@ -9,6 +9,7 @@ from app.repositories.order_repository import OrderRepository
 from app.repositories.ticket_repository import TicketRepository
 from app.services.analysis_service import AnalysisService
 from app.services.claude_service import ClaudeService
+from app.services.faq_service import FaqService
 from app.services.ticket_service import TicketService
 
 
@@ -56,4 +57,11 @@ def get_ticket_service(
     )
 
 
+def get_faq_service(
+    faq_repository: Annotated[FaqRepository, Depends(get_faq_repository)],
+) -> FaqService:
+    return FaqService(faq_repository=faq_repository)
+
+
 TicketServiceDep = Annotated[TicketService, Depends(get_ticket_service)]
+FaqServiceDep = Annotated[FaqService, Depends(get_faq_service)]
