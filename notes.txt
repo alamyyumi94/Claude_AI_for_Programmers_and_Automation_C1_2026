@@ -86,3 +86,19 @@ class SummariseRequest(BaseModel):
 
 What should or app do first?
 Find relevant cust -> relevent order/ticker -> send only relevat context -> claude
+
+
+This looks like a fairly serious shipping problem.
+The customer sounds frustrated and probably needs someone to check the order.
+
+{
+  "summary": "Customer reports a repeated late-delivery issue.",
+  "category": "delivery",
+  "sentiment": "negative",
+  "priority": "high",
+  "needs_order_lookup": true,
+  "needs_faq_lookup": false,
+  "needs_human_review": false,
+  "faq_query": null,
+  "human_review_reason": null
+}

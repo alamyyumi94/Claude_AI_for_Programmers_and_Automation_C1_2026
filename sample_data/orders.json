@@ -1,0 +1,302 @@
+[
+  {
+    "order_id": "ORD-1001",
+    "customer_id": "CUST-101",
+    "items": [
+      {
+        "sku": "MOU-100",
+        "name": "Wireless Mouse",
+        "quantity": 1
+      }
+    ],
+    "status": "delivered",
+    "order_date": "2026-08-01T00:00:00+00:00",
+    "estimated_delivery": "2026-08-05T00:00:00+00:00",
+    "delivered_at": "2026-08-04T11:15:00+00:00"
+  },
+  {
+    "order_id": "ORD-1002",
+    "customer_id": "CUST-102",
+    "items": [
+      {
+        "sku": "MON-240",
+        "name": "24-inch Monitor",
+        "quantity": 1
+      }
+    ],
+    "status": "shipped",
+    "order_date": "2026-08-11T00:00:00+00:00",
+    "estimated_delivery": "2026-08-19T00:00:00+00:00",
+    "delivered_at": null
+  },
+  {
+    "order_id": "ORD-1003",
+    "customer_id": "CUST-103",
+    "items": [
+      {
+        "sku": "HUB-007",
+        "name": "USB-C Hub",
+        "quantity": 1
+      }
+    ],
+    "status": "processing",
+    "order_date": "2026-08-17T00:00:00+00:00",
+    "estimated_delivery": "2026-08-22T00:00:00+00:00",
+    "delivered_at": null
+  },
+  {
+    "order_id": "ORD-1004",
+    "customer_id": "CUST-104",
+    "items": [
+      {
+        "sku": "CAM-200",
+        "name": "Webcam",
+        "quantity": 1
+      }
+    ],
+    "status": "delivered",
+    "order_date": "2026-07-28T00:00:00+00:00",
+    "estimated_delivery": "2026-08-03T00:00:00+00:00",
+    "delivered_at": "2026-08-02T09:30:00+00:00"
+  },
+  {
+    "order_id": "ORD-1005",
+    "customer_id": "CUST-104",
+    "items": [
+      {
+        "sku": "KB-100",
+        "name": "Wireless Keyboard",
+        "quantity": 1
+      }
+    ],
+    "status": "delayed",
+    "order_date": "2026-08-10T00:00:00+00:00",
+    "estimated_delivery": "2026-08-20T00:00:00+00:00",
+    "delivered_at": null
+  },
+  {
+    "order_id": "ORD-1006",
+    "customer_id": "CUST-105",
+    "items": [
+      {
+        "sku": "HDP-500",
+        "name": "Noise Cancelling Headphones",
+        "quantity": 1
+      }
+    ],
+    "status": "cancelled",
+    "order_date": "2026-08-09T00:00:00+00:00",
+    "estimated_delivery": null,
+    "delivered_at": null
+  },
+  {
+    "order_id": "ORD-1007",
+    "customer_id": "CUST-106",
+    "items": [
+      {
+        "sku": "SSD-1TB",
+        "name": "Portable SSD 1TB",
+        "quantity": 1
+      }
+    ],
+    "status": "returned",
+    "order_date": "2026-07-20T00:00:00+00:00",
+    "estimated_delivery": "2026-07-25T00:00:00+00:00",
+    "delivered_at": "2026-07-24T13:20:00+00:00"
+  },
+  {
+    "order_id": "ORD-1008",
+    "customer_id": "CUST-107",
+    "items": [
+      {
+        "sku": "SPK-010",
+        "name": "Bluetooth Speaker",
+        "quantity": 2
+      }
+    ],
+    "status": "shipped",
+    "order_date": "2026-08-12T00:00:00+00:00",
+    "estimated_delivery": "2026-08-19T00:00:00+00:00",
+    "delivered_at": null
+  },
+  {
+    "order_id": "ORD-1009",
+    "customer_id": "CUST-108",
+    "items": [
+      {
+        "sku": "MIC-300",
+        "name": "USB Microphone",
+        "quantity": 1
+      }
+    ],
+    "status": "delayed",
+    "order_date": "2026-08-08T00:00:00+00:00",
+    "estimated_delivery": "2026-08-21T00:00:00+00:00",
+    "delivered_at": null
+  },
+  {
+    "order_id": "ORD-1010",
+    "customer_id": "CUST-109",
+    "items": [
+      {
+        "sku": "PAD-020",
+        "name": "Desk Pad",
+        "quantity": 1
+      }
+    ],
+    "status": "delivered",
+    "order_date": "2026-08-03T00:00:00+00:00",
+    "estimated_delivery": "2026-08-08T00:00:00+00:00",
+    "delivered_at": "2026-08-07T16:10:00+00:00"
+  },
+  {
+    "order_id": "ORD-1011",
+    "customer_id": "CUST-110",
+    "items": [
+      {
+        "sku": "CHR-500",
+        "name": "Ergonomic Office Chair",
+        "quantity": 1
+      }
+    ],
+    "status": "processing",
+    "order_date": "2026-08-16T00:00:00+00:00",
+    "estimated_delivery": "2026-08-25T00:00:00+00:00",
+    "delivered_at": null
+  },
+  {
+    "order_id": "ORD-1012",
+    "customer_id": "CUST-111",
+    "items": [
+      {
+        "sku": "LGT-040",
+        "name": "Monitor Light Bar",
+        "quantity": 1
+      }
+    ],
+    "status": "delivered",
+    "order_date": "2026-08-02T00:00:00+00:00",
+    "estimated_delivery": "2026-08-07T00:00:00+00:00",
+    "delivered_at": "2026-08-06T10:45:00+00:00"
+  },
+  {
+    "order_id": "ORD-1013",
+    "customer_id": "CUST-112",
+    "items": [
+      {
+        "sku": "DOC-900",
+        "name": "Laptop Dock",
+        "quantity": 1
+      }
+    ],
+    "status": "shipped",
+    "order_date": "2026-08-13T00:00:00+00:00",
+    "estimated_delivery": "2026-08-20T00:00:00+00:00",
+    "delivered_at": null
+  },
+  {
+    "order_id": "ORD-1014",
+    "customer_id": "CUST-113",
+    "items": [
+      {
+        "sku": "CAB-USB",
+        "name": "USB-C Cable",
+        "quantity": 3
+      }
+    ],
+    "status": "delivered",
+    "order_date": "2026-08-04T00:00:00+00:00",
+    "estimated_delivery": "2026-08-09T00:00:00+00:00",
+    "delivered_at": "2026-08-08T12:00:00+00:00"
+  },
+  {
+    "order_id": "ORD-1015",
+    "customer_id": "CUST-114",
+    "items": [
+      {
+        "sku": "STN-100",
+        "name": "Laptop Stand",
+        "quantity": 1
+      }
+    ],
+    "status": "returned",
+    "order_date": "2026-07-25T00:00:00+00:00",
+    "estimated_delivery": "2026-07-30T00:00:00+00:00",
+    "delivered_at": "2026-07-29T15:40:00+00:00"
+  },
+  {
+    "order_id": "ORD-1016",
+    "customer_id": "CUST-115",
+    "items": [
+      {
+        "sku": "RTR-600",
+        "name": "Wi-Fi Router",
+        "quantity": 1
+      }
+    ],
+    "status": "delayed",
+    "order_date": "2026-08-09T00:00:00+00:00",
+    "estimated_delivery": "2026-08-22T00:00:00+00:00",
+    "delivered_at": null
+  },
+  {
+    "order_id": "ORD-1017",
+    "customer_id": "CUST-116",
+    "items": [
+      {
+        "sku": "PWR-065",
+        "name": "65W USB-C Charger",
+        "quantity": 1
+      }
+    ],
+    "status": "cancelled",
+    "order_date": "2026-08-14T00:00:00+00:00",
+    "estimated_delivery": null,
+    "delivered_at": null
+  },
+  {
+    "order_id": "ORD-1018",
+    "customer_id": "CUST-117",
+    "items": [
+      {
+        "sku": "KEY-002",
+        "name": "Mechanical Keyboard",
+        "quantity": 1
+      }
+    ],
+    "status": "shipped",
+    "order_date": "2026-08-12T00:00:00+00:00",
+    "estimated_delivery": "2026-08-19T00:00:00+00:00",
+    "delivered_at": null
+  },
+  {
+    "order_id": "ORD-1019",
+    "customer_id": "CUST-118",
+    "items": [
+      {
+        "sku": "ARM-200",
+        "name": "Monitor Arm",
+        "quantity": 1
+      }
+    ],
+    "status": "processing",
+    "order_date": "2026-08-17T00:00:00+00:00",
+    "estimated_delivery": "2026-08-24T00:00:00+00:00",
+    "delivered_at": null
+  },
+  {
+    "order_id": "ORD-1020",
+    "customer_id": "CUST-119",
+    "items": [
+      {
+        "sku": "EAR-050",
+        "name": "Wireless Earbuds",
+        "quantity": 1
+      }
+    ],
+    "status": "delivered",
+    "order_date": "2026-08-05T00:00:00+00:00",
+    "estimated_delivery": "2026-08-10T00:00:00+00:00",
+    "delivered_at": "2026-08-09T14:25:00+00:00"
+  }
+]

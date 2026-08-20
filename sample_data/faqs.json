@@ -1,0 +1,240 @@
+[
+  {
+    "faq_id": "FAQ-001",
+    "category": "return",
+    "question": "How long do I have to return an item?",
+    "answer": "Items may be returned within 30 days of delivery, subject to the return conditions.",
+    "keywords": [
+      "return",
+      "returns",
+      "30 days",
+      "return period"
+    ],
+    "active": true,
+    "updated_at": "2026-08-01T00:00:00+00:00"
+  },
+  {
+    "faq_id": "FAQ-002",
+    "category": "return",
+    "question": "What condition must a returned item be in?",
+    "answer": "Returned items should be in their original condition with included accessories and packaging where reasonably possible.",
+    "keywords": [
+      "return condition",
+      "packaging",
+      "accessories"
+    ],
+    "active": true,
+    "updated_at": "2026-08-01T00:00:00+00:00"
+  },
+  {
+    "faq_id": "FAQ-003",
+    "category": "refund",
+    "question": "When will I receive my refund?",
+    "answer": "Approved refunds are normally processed within 5 to 10 business days after the return is accepted.",
+    "keywords": [
+      "refund",
+      "5 days",
+      "10 days",
+      "processing time"
+    ],
+    "active": true,
+    "updated_at": "2026-08-01T00:00:00+00:00"
+  },
+  {
+    "faq_id": "FAQ-004",
+    "category": "delivery",
+    "question": "How can I track my order?",
+    "answer": "Use your order number to request the latest order status from customer support.",
+    "keywords": [
+      "track",
+      "tracking",
+      "order status",
+      "delivery"
+    ],
+    "active": true,
+    "updated_at": "2026-08-01T00:00:00+00:00"
+  },
+  {
+    "faq_id": "FAQ-005",
+    "category": "delivery",
+    "question": "What happens if my delivery is delayed?",
+    "answer": "If an order is delayed, customer support can check the latest estimated delivery information for the order.",
+    "keywords": [
+      "delayed",
+      "late delivery",
+      "estimated delivery"
+    ],
+    "active": true,
+    "updated_at": "2026-08-01T00:00:00+00:00"
+  },
+  {
+    "faq_id": "FAQ-006",
+    "category": "delivery",
+    "question": "What should I do if my package is marked delivered but missing?",
+    "answer": "Contact customer support with your order number so the delivery can be reviewed.",
+    "keywords": [
+      "missing package",
+      "marked delivered",
+      "not received"
+    ],
+    "active": true,
+    "updated_at": "2026-08-01T00:00:00+00:00"
+  },
+  {
+    "faq_id": "FAQ-007",
+    "category": "billing",
+    "question": "What should I do if I see a duplicate charge?",
+    "answer": "Contact customer support with the order number and charge details. Billing disputes require human review.",
+    "keywords": [
+      "duplicate charge",
+      "charged twice",
+      "billing"
+    ],
+    "active": true,
+    "updated_at": "2026-08-01T00:00:00+00:00"
+  },
+  {
+    "faq_id": "FAQ-008",
+    "category": "billing",
+    "question": "Can customer support change the payment method after an order is placed?",
+    "answer": "The payment method cannot normally be changed after the order has been placed.",
+    "keywords": [
+      "payment method",
+      "change card",
+      "billing"
+    ],
+    "active": true,
+    "updated_at": "2026-08-01T00:00:00+00:00"
+  },
+  {
+    "faq_id": "FAQ-009",
+    "category": "product",
+    "question": "What is the standard product warranty?",
+    "answer": "Warranty terms vary by product. Customer support should use the product-specific warranty information when available.",
+    "keywords": [
+      "warranty",
+      "product warranty",
+      "guarantee"
+    ],
+    "active": true,
+    "updated_at": "2026-08-01T00:00:00+00:00"
+  },
+  {
+    "faq_id": "FAQ-010",
+    "category": "product",
+    "question": "What if my product arrives damaged?",
+    "answer": "Contact customer support promptly with the order number and a description of the damage so the case can be reviewed.",
+    "keywords": [
+      "damaged",
+      "broken",
+      "arrived damaged"
+    ],
+    "active": true,
+    "updated_at": "2026-08-01T00:00:00+00:00"
+  },
+  {
+    "faq_id": "FAQ-011",
+    "category": "account",
+    "question": "How do I update my account email address?",
+    "answer": "Account email changes require identity verification through customer support.",
+    "keywords": [
+      "email",
+      "account email",
+      "change email"
+    ],
+    "active": true,
+    "updated_at": "2026-08-01T00:00:00+00:00"
+  },
+  {
+    "faq_id": "FAQ-012",
+    "category": "account",
+    "question": "What should I do if I cannot access my account?",
+    "answer": "Use the account recovery process first. If recovery fails, contact customer support for identity verification.",
+    "keywords": [
+      "login",
+      "cannot access",
+      "account recovery"
+    ],
+    "active": true,
+    "updated_at": "2026-08-01T00:00:00+00:00"
+  },
+  {
+    "faq_id": "FAQ-013",
+    "category": "general",
+    "question": "How do I contact customer support?",
+    "answer": "Customer support requests can be submitted through the support service with a clear description of the issue.",
+    "keywords": [
+      "contact",
+      "support",
+      "help"
+    ],
+    "active": true,
+    "updated_at": "2026-08-01T00:00:00+00:00"
+  },
+  {
+    "faq_id": "FAQ-014",
+    "category": "return",
+    "question": "Can I return a sale item?",
+    "answer": "Sale items may be returned within the normal return period unless the item was explicitly marked final sale.",
+    "keywords": [
+      "sale item",
+      "final sale",
+      "return"
+    ],
+    "active": true,
+    "updated_at": "2026-08-01T00:00:00+00:00"
+  },
+  {
+    "faq_id": "FAQ-015",
+    "category": "refund",
+    "question": "Can a refund be issued before a returned item is received?",
+    "answer": "Refund approval depends on the case. Customer support must not promise an early refund without authorization.",
+    "keywords": [
+      "early refund",
+      "refund before return",
+      "authorization"
+    ],
+    "active": true,
+    "updated_at": "2026-08-01T00:00:00+00:00"
+  },
+  {
+    "faq_id": "FAQ-016",
+    "category": "delivery",
+    "question": "Can I change my delivery address after shipment?",
+    "answer": "Once an order has shipped, address changes may not be possible and require human review.",
+    "keywords": [
+      "address",
+      "change address",
+      "shipped"
+    ],
+    "active": true,
+    "updated_at": "2026-08-01T00:00:00+00:00"
+  },
+  {
+    "faq_id": "FAQ-017",
+    "category": "product",
+    "question": "Can customer support recommend compatible accessories?",
+    "answer": "Support may explain compatibility only when verified product information is available.",
+    "keywords": [
+      "compatible",
+      "accessories",
+      "compatibility"
+    ],
+    "active": true,
+    "updated_at": "2026-08-01T00:00:00+00:00"
+  },
+  {
+    "faq_id": "FAQ-018",
+    "category": "general",
+    "question": "Can the AI support system approve refunds or payments?",
+    "answer": "No. The AI support system can analyse requests and draft responses, but financial actions require authorized application logic or human approval.",
+    "keywords": [
+      "AI",
+      "refund approval",
+      "payments",
+      "authority"
+    ],
+    "active": true,
+    "updated_at": "2026-08-01T00:00:00+00:00"
+  }
+]
