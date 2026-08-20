@@ -27,6 +27,6 @@ class AnalysisService:
         return await self.claude_service.generate_structured(
             user_prompt,
             system=TICKET_ANALYSIS_SYSTEM_PROMPT,
-            output_model=TicketAnalysis,
+            schema=TicketAnalysis,
             max_tokens=500,
         )

@@ -1,6 +1,5 @@
 from datetime import datetime
 from enum import Enum
-from unittest import case
 
 from pydantic import Field
 from app.schemas.common import StricModel
@@ -31,7 +30,7 @@ class OrderContext(StricModel):
     )
     status: OrderStatus = Field(description="Current status of the order")
     items: list[OrderItem] = Field(
-        min_items=1, description="List of items in the order"
+        min_length=1, description="List of items in the order"
     )
     estimated_delivery: datetime | None = None
     delivered_at: datetime | None = None
