@@ -1,4 +1,6 @@
+import asyncio
 import json
+from collections.abc import AsyncIterator, Awaitable, Callable, Mapping
 from dataclasses import dataclass
 from typing import Generic, TypeVar
 
@@ -25,6 +27,21 @@ ModelT = TypeVar("ModelT", bound=BaseModel)
 
 
 
+# One tool call Claude asked us to run.
+# Claude never runs a tool itself: it only says "please call tool X with these arguments",
+# and OUR application decides whether and how to execute it.
+@dataclass(frozen=True)
+class ClaudeToolCall:
+    id: str         # Anthropic's id for this call; the result must be sent back with the same id.
+    name: str       # Which tool Claude wants (matches the "name" in the tool definition).
+    arguments: dict # The arguments Claude filled in, already parsed into a Python dict.
+
+
+# A tool handler is an async function that takes the arguments dict and returns a string result.
+# Example: async def lookup_order(args: dict) -> str: ...
+ToolHandler = Callable[[dict], Awaitable[str]]
+
+
 # This class defines the result that OUR application wants to receive back from ClaudeService.
 # frozen=True makes the object immutable after it is created.
 @dataclass(frozen=True)
@@ -33,6 +50,14 @@ class ClaudeTextResult:
     model: str # The Claude model that produced the response.
     input_tokens: int # Number of tokens Claude processed as input.
     output_tokens: int # Number of tokens Claude generated as output.
+
+    # Why Claude stopped: "end_turn", "tool_use", "max_tokens", ...
+    # "tool_use" means Claude is waiting for us to run the tools listed below.
+    stop_reason: str | None = None
+
+    # Tool calls Claude requested. Empty when no tools were offered or none were used.
+    # A tuple (not a list) because this dataclass is frozen/immutable.
+    tool_calls: tuple[ClaudeToolCall, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -71,6 +96,12 @@ class ClaudeService:
         # str | None means it may contain a string or None.
         system: str | None = None,
 
+        # Optional tool definitions Claude is allowed to ask for.
+        # This is a LIST of tool schemas, e.g.
+        # [{"name": "lookup_order", "description": "...", "input_schema": {...}}]
+        # Offering a tool does not run anything: see generate_with_tools() for that.
+        tools: list[dict] | None = None,
+
     ) -> ClaudeTextResult:
 
         # Build the request that will be sent to Claude. This is just a normal Python dictionary.
@@ -89,6 +120,11 @@ class ClaudeService:
         # If system is None or empty, this block is skipped.
         if system:
             request["system"] = system
+
+        # Only send the "tools" field when we actually have tools to offer.
+        # Note the plural: the Messages API parameter is "tools", and it expects a list.
+        if tools:
+            request["tools"] = tools
 
         # ---------------------------------------------------------
         # THIS PART IS THE ACTUAL CLAUDE API CALL
@@ -133,6 +169,18 @@ class ClaudeService:
 
         text = "\n".join(text_parts).strip() # Join all text blocks together using a newline.
 
+        # Alongside text blocks, a response may contain "tool_use" blocks.
+        # Each one is a request from Claude to run a tool and send the result back.
+        tool_calls = tuple(
+            ClaudeToolCall(
+                id=block.id,
+                name=block.name,
+                arguments=dict(block.input), # block.input is already parsed JSON, never a raw string.
+            )
+            for block in message.content
+            if block.type == "tool_use"
+        )
+
         # Converts Anthropic's SDK response into our app's (simpler) ClaudeTextResult object.
         # This means routes and other services do not need to know the internal structure of the Anthropic response.
         return ClaudeTextResult(
@@ -140,6 +188,8 @@ class ClaudeService:
             model=message.model, # The model reported by Anthropic in the response.
             input_tokens=message.usage.input_tokens, # How many tokens Claude processed as input.
             output_tokens=message.usage.output_tokens, # How many tokens Claude generated as output.
+            stop_reason=message.stop_reason, # "tool_use" when Claude is waiting for tool results.
+            tool_calls=tool_calls, # Empty tuple when Claude did not ask for any tool.
         )
 
     async def generate_structured(
@@ -171,6 +221,200 @@ class ClaudeService:
             input_tokens=result.input_tokens,
             output_tokens=result.output_tokens,
         )
+        
+    # Turn one tool_use block from Claude into the tool_result block we must send back.
+    # This is a helper for generate_with_tools() below, so it starts with an underscore.
+    @staticmethod
+    async def _run_tool(
+        handlers: Mapping[str, ToolHandler],
+        block,  # A "tool_use" content block from the Anthropic SDK.
+    ) -> dict:
+        handler = handlers.get(block.name)
+
+        # Claude can only ask for tools we offered, but it may still hallucinate a name,
+        # so an unknown tool is reported back as an error instead of crashing the loop.
+        if handler is None:
+            return {
+                "type": "tool_result",
+                "tool_use_id": block.id,
+                "content": f"Unknown tool: {block.name}",
+                "is_error": True,
+            }
+
+        try:
+            # block.input is the arguments dict Claude filled in from our input_schema.
+            output = await handler(dict(block.input))
+        except Exception as e:
+            # A failing tool is normal application life. Telling Claude about the failure
+            # lets it apologise or try something else; raising here would abort the request.
+            return {
+                "type": "tool_result",
+                "tool_use_id": block.id,
+                "content": f"Tool {block.name} failed: {e}",
+                "is_error": True,
+            }
+
+        return {
+            "type": "tool_result",
+            "tool_use_id": block.id,  # Must match the id of the tool_use block.
+            "content": output,
+        }
+
+    # This method runs the full "agentic loop":
+    #   1. Send the conversation to Claude together with the tool definitions.
+    #   2. If Claude replies with tool_use blocks, run the matching handlers.
+    #   3. Send the tool results back and ask Claude again.
+    #   4. Repeat until Claude answers with normal text instead of a tool call.
+    #
+    # The Messages API is stateless, so we resend the whole conversation each round.
+    async def generate_with_tools(
+        self,
+        user_message: str,
+        *,
+        # The tool schemas Claude may choose from.
+        tools: list[dict],
+
+        # Maps a tool name to the async function that actually performs it.
+        # Every name in "tools" should have an entry here.
+        handlers: Mapping[str, ToolHandler],
+
+        max_tokens: int = 1000,
+        system: str | None = None,
+
+        # Safety net: without it, a confused model could loop forever and burn tokens.
+        max_iterations: int = 5,
+    ) -> ClaudeTextResult:
+
+        # The growing conversation. It starts with the customer/user message.
+        messages: list[dict] = [
+            {
+                "role": "user",
+                "content": user_message,
+            }
+        ]
+
+        # Every round costs tokens, so we add them up and report the total.
+        input_tokens = 0
+        output_tokens = 0
+        model = self.model
+
+        for _ in range(max_iterations):
+            request = {
+                "model": self.model,
+                "max_tokens": max_tokens,
+                "messages": messages,
+                "tools": tools,
+            }
+
+            if system:
+                request["system"] = system
+
+            message = await self.client.messages.create(**request)
+
+            model = message.model
+            input_tokens += message.usage.input_tokens
+            output_tokens += message.usage.output_tokens
+
+            tool_uses = [
+                block
+                for block in message.content
+                if block.type == "tool_use"
+            ]
+
+            # No tool requested means Claude is done: return its answer.
+            if message.stop_reason != "tool_use" or not tool_uses:
+                text_parts = [
+                    block.text
+                    for block in message.content
+                    if block.type == "text"
+                ]
+
+                return ClaudeTextResult(
+                    text="\n".join(text_parts).strip(),
+                    model=model,
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
+                    stop_reason=message.stop_reason,
+                )
+
+            # Claude's own turn goes back unchanged, tool_use blocks included.
+            # Rewriting or dropping those blocks breaks the id matching below.
+            messages.append(
+                {
+                    "role": "assistant",
+                    "content": message.content,
+                }
+            )
+
+            # Claude may request several tools at once, so run them concurrently.
+            # asyncio.gather keeps the results in the same order as the requests.
+            tool_results = await asyncio.gather(
+                *(
+                    self._run_tool(handlers, block)
+                    for block in tool_uses
+                )
+            )
+
+            # IMPORTANT: all tool results belong in ONE user message.
+            # Splitting them across several messages teaches Claude to stop asking
+            # for tools in parallel, which makes later requests slower.
+            messages.append(
+                {
+                    "role": "user",
+                    "content": list(tool_results),
+                }
+            )
+
+        # Reaching this point means Claude kept asking for tools without ever answering.
+        raise ClaudeResponseError(
+            f"Claude did not produce a final answer within {max_iterations} tool rounds."
+        )
+
+    # This method streams Claude's answer piece by piece instead of waiting for the whole reply.
+    # Because the body contains "yield", Python turns this into an async generator:
+    # the caller uses "async for chunk in service.generate_text_stream(...)".
+    # Typical use: FastAPI StreamingResponse, so the user sees text appear while Claude is still writing.
+    async def generate_text_stream(
+        self,
+        user_message: str,          # The message/task we want Claude to process.
+        *,
+        max_tokens: int = 300,
+        system: str | None = None,
+
+        # Tools may be offered while streaming, but this method only yields TEXT.
+        # If Claude decides to call a tool, nothing is yielded for it and nothing is executed.
+        # Use generate_with_tools() when the tools must actually run.
+        tools: list[dict] | None = None,
+    ) -> AsyncIterator[str]:        # Each yielded value is a small piece ("delta") of Claude's text.
+
+        # Same request shape as generate_text(); the streaming helper adds "stream": true for us.
+        request = {
+            "model": self.model,
+            "max_tokens": max_tokens,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": user_message,
+                }
+            ],
+        }
+
+        if system:
+            request["system"] = system
+
+        if tools:
+            request["tools"] = tools
+
+        # client.messages.stream(...) is the SDK's streaming helper.
+        # "async with" keeps the HTTP connection open while we read, and closes it afterwards
+        # even if the caller stops reading early or an error is raised.
+        async with self.client.messages.stream(**request) as stream:
+
+            # stream.text_stream yields only the text parts of the response,
+            # so we do not have to inspect content blocks ourselves.
+            async for chunk in stream.text_stream:
+                yield chunk
+
 
     async def close(self) -> None:
         await self.client.close()
