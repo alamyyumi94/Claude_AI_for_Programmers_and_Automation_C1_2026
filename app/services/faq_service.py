@@ -1,22 +1,13 @@
 from dataclasses import dataclass
 
-from app.core.prompt_data import (
-    serialize_prompt_payload,
-)
-from app.prompts.faq_answer import (
-    FAQ_ANSWER_SYSTEM_PROMPT,
-)
-from app.repositories.faq_repository import (
-    FAQRepository,
-)
+from app.core.prompt_data import serialize_prompt_payload
+from app.prompts.faq_answer import FAQ_ANSWER_SYSTEM_PROMPT
+from app.repositories.faq_repository import FAQRepository
+from app.services.claude_service import ClaudeService
 from app.schemas.faq import (
     FAQAnswerDecision,
     FAQSource,
 )
-from app.services.claude_service import (
-    ClaudeService,
-)
-
 
 # Application-owned fallback used when approved evidence is unavailable.
 NO_APPROVED_FAQ_ANSWER = (
@@ -35,9 +26,11 @@ class FAQAnswerResult:
     input_tokens: int | None
     output_tokens: int | None
 
+
 class FAQService:
     def __init__(
         self,
+        *,
         faq_repository: FAQRepository,
         claude_service: ClaudeService,
     ) -> None:
@@ -48,13 +41,13 @@ class FAQService:
         self,
         question: str,
     ) -> FAQAnswerResult:
-        # Retrieve approved FAQ sources from the repository.
+        # Retrieve approved FAQ sources first.
         sources = await self.faq_repository.search(
             question,
             limit=3,
         )
 
-        # If no approved FAQ sources are found, return a fallback answer.
+        # No approved evidence -> application fallback, no Claude answer call.
         if not sources:
             return FAQAnswerResult(
                 answer=NO_APPROVED_FAQ_ANSWER,
@@ -65,29 +58,19 @@ class FAQService:
                 output_tokens=None,
             )
 
-        # Serialize the prompt payload for Claude.
         payload = {
             "customer_question": question,
             "approved_faq_sources": [
-                source.model_dump(
-                    mode="json",
-                )
+                source.model_dump(mode="json")
                 for source in sources
             ],
         }
 
-        result = (
-            await self.claude_service
-            .generate_structured(
-                serialize_prompt_payload(
-                    payload
-                ), 
-                system=FAQ_ANSWER_SYSTEM_PROMPT,
-                schema=FAQAnswerDecision,
-                # claude-sonnet-5 thinks before answering, so the budget must
-                # cover the thinking tokens as well as the JSON reply.
-                max_tokens=1200,
-            )
+        result = await self.claude_service.generate_structured(
+            serialize_prompt_payload(payload),
+            system=FAQ_ANSWER_SYSTEM_PROMPT,
+            output_model=FAQAnswerDecision,
+            max_tokens=300,
         )
 
         return FAQAnswerResult(

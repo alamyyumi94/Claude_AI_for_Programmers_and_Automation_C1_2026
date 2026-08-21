@@ -107,3 +107,9 @@ customer messaage -> customerid + orderid -> OrderRepository -> OrderContext + c
 
 
 question -> FAQREpo -> approved canditdates -> claude -> supported answer? -> app fallback
+
+order lookup?
+FAQ search?
+ticket create
+response generationo
+update ticket

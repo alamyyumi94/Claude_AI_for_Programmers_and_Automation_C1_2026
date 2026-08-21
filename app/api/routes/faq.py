@@ -1,11 +1,15 @@
 from fastapi import APIRouter
-
-from app.api.dependencies import FAQServiceDep
+from app.database import get_database
+from app.repositories.faq_repository import FAQRepository
 from app.schemas.faq import (
     FAQAskRequest,
     FAQAskResponse,
 )
 from app.schemas.usage import AIUsage
+from app.services import faq_service
+from app.services.claude_service import ClaudeService
+from app.services.faq_service import FAQService
+
 
 router = APIRouter(
     prefix="/faq",
@@ -21,25 +25,38 @@ async def ask_faq(
     request: FAQAskRequest,
     faq_service: FAQServiceDep,
 ) -> FAQAskResponse:
-    result = await faq_service.ask(request.question)
+    claude_service = ClaudeService()
 
+    # Compose the service from the Claude and MongoDB boundaries
+    service = FAQService(
+        faq_repository=FAQRepository(
+            get_database()
+        ),
+        claude_service=claude_service,
+    )
+
+    try:
+        result = await service.ask(
+            request.question
+        )
+    finally:
+        await claude_service.close()
+
+    # If no Claude answer call happened, usage remains None.
     usage = None
 
     if result.model is not None:
         usage = AIUsage(
             model=result.model,
-            input_tokens=(
-                result.input_tokens or 0
-            ),
-            output_tokens=(
-                result.output_tokens or 0
-            ),
+            input_tokens=result.input_tokens or 0,
+            output_tokens=result.output_tokens or 0,
         )
 
-    # Model/token details are exposed through `usage`; FAQAskResponse forbids extras.
     return FAQAskResponse(
         answer=result.answer,
         sources=result.sources,
-        requires_human_review=result.requires_human_review,
+        requires_human_review=(
+            result.requires_human_review
+        ),
         usage=usage,
     )

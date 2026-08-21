@@ -2,9 +2,9 @@
 from fastapi import APIRouter, HTTPException
 
 # System prompt used specifically for the summarisation endpoint.
-from app.prompts.summarise import (
-    SUMMARISE_SYSTEM_PROMPT,
-)
+from app.prompts.summarise import SUMMARISE_SYSTEM_PROMPT
+
+from app.repositories.faq_repository import FAQRepository
 
 # Pydantic request/response models used by the AI endpoints.
 from app.schemas.ai import (
@@ -25,30 +25,19 @@ from app.schemas.usage import AIUsage
 from app.database import get_database
 
 # Repository responsible for retrieving trusted order data from the database.
-from app.repositories.order_repository import (
-    OrderRepository,
-)
+from app.repositories.order_repository import OrderRepository
 
 # Application service responsible for analysing customer-support tickets.
-from app.services.analysis_service import (
-    AnalysisService,
-)
+from app.services.analysis_service import AnalysisService
 
 # Low-level Claude integration service responsible for communicating with Anthropic.
-from app.services.claude_service import (
-    ClaudeResponseError,
-    ClaudeService,
-)
+from app.services.claude_service import ClaudeService
 
 # Service responsible for generating a customer-facing response using Claude.
-from app.services.response_service import (
-    ResponseService,
-)
+from app.services.response_service import ResponseService
 
 # Workflow service that coordinates order retrieval and AI response generation.
-from app.services.generate_response_service import (
-    GenerateResponseService,
-)
+from app.services.generate_response_service import GenerateResponseService
 
 
 # Create a router for AI-related endpoints.
@@ -66,11 +55,10 @@ router = APIRouter(tags=["ai"])
     response_model=SummariseResponse,
 )
 async def summarise_text(
-    # FastAPI/Pydantic validates the incoming JSON as a SummariseRequest.
-    request: SummariseRequest,
+    request: SummariseRequest,      # FastAPI/Pydantic validates the incoming JSON as a SummariseRequest.
 ) -> SummariseResponse:
-    # Create a Claude client/service for this request.
-    claude_service = ClaudeService()
+    claude_service = ClaudeService()    # Create a Claude client/service for this request.
+
     try:
         # Send the user's text to Claude using the summarisation system prompt.
         result = await claude_service.generate_text(
@@ -104,16 +92,10 @@ async def summarise_text(
     response_model=AnalyseResponse,
 )
 async def analyse_ticket(
-    # Validate the incoming request using the AnalyseRequest schema.
-    request: AnalyseRequest,
+    request: AnalyseRequest,        # Validate the incoming request using the AnalyseRequest schema.
 ) -> AnalyseResponse:
-    # Create the reusable Claude integration service.
-    claude_service = ClaudeService()
-
-    # Create the ticket-analysis business service and inject ClaudeService into it.
-    analyse_service = AnalysisService(
-        claude_service
-    )
+    claude_service = ClaudeService()    # Create the reusable Claude integration service.
+    analyse_service = AnalysisService(claude_service)   # Create the ticket-analysis business service and inject ClaudeService into it.
 
     try:
         # Analyse the customer-support message and return structured output.
@@ -125,13 +107,11 @@ async def analyse_ticket(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
     finally:
-        # Ensure network resources held by the Claude client are released.
-        await claude_service.close()
+        await claude_service.close()    # Ensure network resources held by the Claude client are released.
 
     # Build the public API response from the structured analysis and usage metadata.
     return AnalyseResponse(
-        # result.data is the validated structured TicketAnalysis object.
-        analysis=result.data,
+        analysis=result.data,   # result.data is the validated structured TicketAnalysis object.
 
         # Expose model and token usage separately from the analysis itself.
         usage=AIUsage(
@@ -164,26 +144,21 @@ async def generate_response(
 
     # Build the application workflow and inject all of its dependencies.
     service = GenerateResponseService(
-
-        # ResponseService knows how to ask Claude to draft a customer response.
         response_service=ResponseService(
             claude_service
         ),
-
-        # OrderRepository knows how to retrieve trusted order information.
         order_repository=OrderRepository(
+            database
+        ),
+        faq_repository=FAQRepository(
             database
         ),
     )
 
     try:
-        # Coordinate optional order lookup plus AI response generation.
-        result = await service.generate(
-            request
-        )
+        result = await service.generate(request)    # Coordinate optional order lookup plus AI response generation.
     finally:
-        # Close the per-request Claude client even when generation raises an error.
-        await claude_service.close()
+        await claude_service.close()        # Close the per-request Claude client even when generation raises an error.
 
     # Convert the workflow result into the API's public response shape.
     return GenerateResponseResponse(
@@ -194,6 +169,7 @@ async def generate_response(
         # Tell the caller which trusted order record was actually used, if any.
         context_used=ResponseContextUsed(
             order_id=result.order_id_used,
+            faq_ids=result.faq_ids_used,
         ),
 
         # Include Claude model and token usage for visibility and monitoring.
