@@ -15,7 +15,6 @@ from app.schemas.ai import (
     ResponseContextUsed,
     SummariseRequest,
     SummariseResponse,
-    TicketAnalysis,
 )
 
 # Shared usage schema used to expose Claude model/token information in responses.
@@ -31,7 +30,7 @@ from app.repositories.order_repository import OrderRepository
 from app.services.analysis_service import AnalysisService
 
 # Low-level Claude integration service responsible for communicating with Anthropic.
-from app.services.claude_service import ClaudeService
+from app.services.claude_service import ClaudeResponseError, ClaudeService
 
 # Service responsible for generating a customer-facing response using Claude.
 from app.services.response_service import ResponseService
@@ -100,7 +99,7 @@ async def analyse_ticket(
     try:
         # Analyse the customer-support message and return structured output.
         result = await analyse_service.analyse(
-            request.text
+            request.message
         )
     except ClaudeResponseError as e:
         raise HTTPException(status_code=502, detail=str(e)) from e

@@ -1,15 +1,12 @@
-from fastapi import APIRouter
-from app.database import get_database
-from app.repositories.faq_repository import FAQRepository
+from fastapi import APIRouter, HTTPException
+
+from app.api.dependencies import FAQServiceDep
 from app.schemas.faq import (
     FAQAskRequest,
     FAQAskResponse,
 )
 from app.schemas.usage import AIUsage
-from app.services import faq_service
-from app.services.claude_service import ClaudeService
-from app.services.faq_service import FAQService
-
+from app.services.claude_service import ClaudeResponseError
 
 router = APIRouter(
     prefix="/faq",
@@ -25,22 +22,10 @@ async def ask_faq(
     request: FAQAskRequest,
     faq_service: FAQServiceDep,
 ) -> FAQAskResponse:
-    claude_service = ClaudeService()
-
-    # Compose the service from the Claude and MongoDB boundaries
-    service = FAQService(
-        faq_repository=FAQRepository(
-            get_database()
-        ),
-        claude_service=claude_service,
-    )
-
     try:
-        result = await service.ask(
-            request.question
-        )
-    finally:
-        await claude_service.close()
+        result = await faq_service.ask(request.question)
+    except ClaudeResponseError as e:
+        raise HTTPException(status_code=502, detail=str(e)) from e
 
     # If no Claude answer call happened, usage remains None.
     usage = None
@@ -55,8 +40,6 @@ async def ask_faq(
     return FAQAskResponse(
         answer=result.answer,
         sources=result.sources,
-        requires_human_review=(
-            result.requires_human_review
-        ),
+        requires_human_review=result.requires_human_review,
         usage=usage,
     )

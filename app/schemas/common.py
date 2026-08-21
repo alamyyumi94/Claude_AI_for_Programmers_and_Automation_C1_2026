@@ -40,15 +40,5 @@ class Priority(str, Enum):
     LOW = "low"
 
 
-class TicketStatus(str, Enum):
-    NEW = "new"
-    ANALYZED = "analyzed"
-    PROCESSED = "processed"
-    ESCALATED = "escalated"
-    NEEDS_HUMAN_REVIEW = "needs_human_review"
-    PROCESSING = "processing"
-    CLOSED = "closed"
-
-
 class healthResponse(BaseModel):
     status: Literal["ok"]

@@ -69,7 +69,7 @@ class FAQService:
         result = await self.claude_service.generate_structured(
             serialize_prompt_payload(payload),
             system=FAQ_ANSWER_SYSTEM_PROMPT,
-            output_model=FAQAnswerDecision,
+            schema=FAQAnswerDecision,
             max_tokens=300,
         )
 
