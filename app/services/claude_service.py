@@ -1,8 +1,22 @@
+# route/service -> ClaudeService -> Anthropic SDK
+# input -> build one Claude request -> send request -> receive response -> return result
+# Goal -> decide what to do -> choose tool
+'''
+generate_text() ->  normal text      send a message to Claude and get back text
+generate_structured() -> validated structured data (Pydantic model)      send a message to Claude and get back structured data
+generate_with_tools() -> final text after running any tools Claude asked for
+generate_text_stream() -> text yielded piece by piece while Claude is still writing
+create_message() -> raw content send a message to Claude and get back a message object (for tool use)
+'''
+
 import asyncio
 import json
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping
+
+# A dataclass is a simple way to create a class whose main purpose is to hold data.
 from dataclasses import dataclass
-from typing import Generic, TypeVar
+
+from typing import Generic, TypeVar, Any
 
 # AsyncAnthropic is Anthropic's asynchronous Python SDK client.
 # We use it to send requests to the Claude API without blocking the FastAPI application while waiting for a response.
@@ -414,6 +428,35 @@ class ClaudeService:
             # so we do not have to inspect content blocks ourselves.
             async for chunk in stream.text_stream:
                 yield chunk
+
+
+    # This ClaudeService extension preserves raw Messages API content blocks so tool-use requests can be inspected safely.
+    async def create_message(
+        self,
+        # Maintain the bounded conversation state sent back to Claude after each tool result.
+        messages: list[dict[str, Any]],
+        *,
+        max_tokens: int = 600,
+        system: str | None = None,
+        tools: list[dict[str, Any]] | None = None,
+    ) -> Any:
+        # Tool-use responses may contain raw content blocks, not only text.
+        request: dict[str, Any] = {
+            "model": self.model,
+            "max_tokens": max_tokens,
+            "messages": messages,
+        }
+
+        if system:
+            request["system"] = system
+
+        # The application explicitly chooses which tools are offered to Claude.
+        if tools:
+            request["tools"] = tools
+
+        return await self.client.messages.create(
+            **request
+        )
 
 
     async def close(self) -> None:

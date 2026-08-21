@@ -145,3 +145,57 @@ generate response with trusted context
 choose final status
 update ticket
 return result
+
+Desterministic vs Agentic Workflows
+DETERMINISTIC
+
+Python chooses:
+analyse
+ -> retrieve
+ -> persist
+ -> generate
+ -> update
+
+AGENTIC
+Application defines:
+allowed capabilities + boundaries
+
+Claude may request:
+which permitted capability to use next
+
+Application:
+validates + authorizes + executes
+
+
+Tool-use
+Claude
+  |
+  | "I want get_order_status(...)"
+  v
+application
+  |
+  +--> is the tool allow listed?
+  +--> do arguments validate?
+  +--> is the requested order permitted?
+  |
+  v
+repository / application function
+  |
+  v
+tool_result
+  |
+  v
+Claude
+
+Claude decide next step -> tool_use -> ToolRegistry -> tool_result ->
+
+ToolRegistry
+    is this tool allowed?
+    are the args valid?
+    Is this order/customer permitted?
+    Execute approved app code
+
+
+    get_order_status(
+        order_id="our_id"
+    )
