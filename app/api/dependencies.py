@@ -10,7 +10,9 @@ from app.repositories.ticket_repository import TicketRepository
 from app.services.analysis_service import AnalysisService
 from app.services.claude_service import ClaudeService
 from app.services.faq_service import FAQService
+from app.services.response_service import ResponseService
 from app.services.ticket_service import TicketService
+from app.services.workflow_service import WorkflowService
 
 
 def get_ticket_repository() -> TicketRepository:
@@ -59,8 +61,33 @@ def get_faq_service(
     )
 
 
+def get_response_service(
+    claude_service: Annotated[ClaudeService, Depends(get_claude_service)],
+) -> ResponseService:
+    return ResponseService(claude_service)
+
+
+def get_workflow_service(
+    analysis_service: Annotated[AnalysisService, Depends(get_analysis_service)],
+    response_service: Annotated[ResponseService, Depends(get_response_service)],
+    ticket_service: Annotated[TicketService, Depends(get_ticket_service)],
+    order_repository: Annotated[OrderRepository, Depends(get_order_repository)],
+    faq_repository: Annotated[FAQRepository, Depends(get_faq_repository)],
+) -> WorkflowService:
+    """Assemble the workflow orchestrator from already-wired dependencies."""
+    return WorkflowService(
+        analysis_service=analysis_service,
+        response_service=response_service,
+        ticket_service=ticket_service,
+        order_repository=order_repository,
+        faq_repository=faq_repository,
+    )
+
+
 ClaudeServiceDep = Annotated[ClaudeService, Depends(get_claude_service)]
 AnalysisServiceDep = Annotated[AnalysisService, Depends(get_analysis_service)]
 TicketServiceDep = Annotated[TicketService, Depends(get_ticket_service)]
 FAQServiceDep = Annotated[FAQService, Depends(get_faq_service)]
 OrderRepositoryDep = Annotated[OrderRepository, Depends(get_order_repository)]
+ResponseServiceDep = Annotated[ResponseService, Depends(get_response_service)]
+WorkflowServiceDep = Annotated[WorkflowService, Depends(get_workflow_service)]
