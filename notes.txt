@@ -113,3 +113,35 @@ FAQ search?
 ticket create
 response generationo
 update ticket
+
+
+CLAUDE-ASSISTED
+analyse tickets
+draft responses
+
+APPLICATION-CONTROLLED
+validates request
+retrieves order
+retrieves faq
+create/saving tickets
+
+
+request -> analysis -> order and/or faq lookup -> create ticket -> generate reponse -> app decides final status -> update ticket
+
+analyse request
+
+if order lookup is required
+    retrieve authorised order
+    if no authorised order
+        require human review
+
+if faq lookup is required
+    retrieve approved faq context
+    if no aproved faq
+        require human review
+
+create ticket
+generate response with trusted context
+choose final status
+update ticket
+return result
